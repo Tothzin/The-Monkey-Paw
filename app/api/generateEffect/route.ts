@@ -6,14 +6,35 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    const prompt = `
-    Gere um efeito positivo fantástico que uma pessoa poderia receber, de forma criativa e absurda.
-    Depois gere um efeito negativo sinistro e bizarro como consequência direta.
-    Adicione um texto curto e engraçado para acompanhar essa combinação.
-    Formate em JSON com as chaves: advantage, disadvantage, flavor_text.
-    `
+    const body = await request.json()
+    const { type } = body
+
+    let prompt = ''
+    
+    if (type === 'advantage') {
+      prompt = `
+      Generate a fantastic and absurd positive effect that a person could receive.
+      Then generate a sinister and bizarre negative effect as a direct consequence.
+      Add a short and humorous text to accompany this combination.
+      Format as JSON with keys: advantage, disadvantage, flavor_text.
+      `
+    } else if (type === 'disadvantage') {
+      prompt = `
+      Generate a sinister and bizarre negative effect that a person could receive.
+      Then generate a fantastic and absurd positive effect as a direct consequence.
+      Add a short and humorous text to accompany this combination.
+      Format as JSON with keys: advantage, disadvantage, flavor_text.
+      `
+    } else {
+      prompt = `
+      Generate a fantastic positive effect that a person could receive, in a creative and absurd way.
+      Then generate a sinister and bizarre negative effect as a direct consequence.
+      Add a short and humorous text to accompany this combination.
+      Format as JSON with keys: advantage, disadvantage, flavor_text.
+      `
+    }
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
@@ -27,10 +48,10 @@ export async function POST() {
     try {
       json = JSON.parse(text)
     } catch {
-      return NextResponse.json({ error: 'Falha ao interpretar resposta da IA' }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to interpret AI response' }, { status: 500 })
     }
 
-    // Salvar no Supabase
+    // Save to Supabase
     const { data, error } = await supabase.from('effects').insert({
       advantage: json.advantage,
       disadvantage: json.disadvantage,
@@ -47,6 +68,6 @@ export async function POST() {
       flavor_text: data.flavor_text,
     })
   } catch (err) {
-    return NextResponse.json({ error: 'Erro inesperado: ' + (err as Error).message }, { status: 500 })
+    return NextResponse.json({ error: 'Unexpected error: ' + (err as Error).message }, { status: 500 })
   }
 }
